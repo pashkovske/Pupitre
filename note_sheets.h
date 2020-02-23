@@ -15,33 +15,41 @@ struct noteStyle
 	int nSize;
 };
 
+class cursor : public QWidget
+{
+	std::list<char>::iterator position;
+	void paintEvent(QPaintEvent*);
+public:
+	std::list<char>::iterator getPos();
+	void setPos(std::list<char>::iterator);
+};
+
 class noteString : public QWidget
 {
 	std::list<char>::iterator begin_it;
 	std::list<char>::iterator end_it;
-//	std::list<char>::iterator cursor;
 	noteStyle style;
-//	int stringNumber;
-//	static numberOfStrings;
+	QWidget* _document;
 
-//	void keyPressEvent(QKeyEvent*);
 	void paintEvent(QPaintEvent*);
 public:
 	noteString(QWidget*);
 	void setContent(std::list<char>::iterator, std::list<char>::iterator);
-//	noteString(QWidget*, std::list<char>::iterator begin);
 };
 
 class document : public QWidget
 {
 	std::list<char> melody;
 	melodyFormat format;
+	cursor* _cursor;
 	noteString** nString;
-	QBoxLayout* layout;
-	void paintEvent(QPaintEvent*);
-
 	noteStyle style;
+	QBoxLayout* layout;
+
+	void paintEvent(QPaintEvent*);
+	void keyPressEvent(QKeyEvent*);
 public:
 	document(std::list<char>::iterator, std::list<char>::iterator);
 	~document();
+	int getNoteSize();
 };
