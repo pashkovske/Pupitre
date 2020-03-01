@@ -1,39 +1,33 @@
 #include "note_sheets.h"
+#include <iostream>
 
-using std::list;
 using namespace Qt;
+using std::vector;
+typedef std::list<char>::iterator it;
 
-noteString::noteString(QWidget* parentWidget):QWidget(parentWidget),_document(parentWidget)
+nStringPainter::nStringPainter(document* doc):QPainter(doc) {}
+
+void nStringPainter::drawNote(nStringStyle style, qreal x, qreal y)
 {
-	style.nSize = _document->getNoteSize();
+	drawEllipse(x, y, 1.3* style.size, style.size);
 }
 
-void noteString::setContent(list<char>::iterator beginit, list<char>::iterator endit)
+void nStringPainter::drawString(nStringLayout* const layout, qreal x, qreal y)
 {
-	begin_it = beginit;
-	end_it = endit;
-}
+	nStringStyle style = layout->getStyle();
 
-void noteString::paintEvent(QPaintEvent*)
-{
-	QPainter painter(this);
-	for(int i = 0; i < 5; ++i)
-		painter.drawLine(
-				QPointF(0, (i + 4)* style.nSize),
-				QPointF(width(), (i + 4)* style.nSize));
-	painter.setBrush(QBrush(black, SolidPattern));
-	list<char>::iterator note_it = begin_it;
-	int horisontalPos = 3*style.nSize;
-	while(note_it != end_it)
-	{
-		painter.drawEllipse(
-				horisontalPos, (17 + 'c' - *note_it)*style.nSize/2,
-				1.3*style.nSize, style.nSize);
-		horisontalPos += 4*style.nSize;
-		note_it++;
-	}
-}
+	int i;
+	for(i = 0; i < 5; ++i)
+		drawLine(
+				QPointF(x, y + (i + 4)* style.size),
+				QPointF(x + style.width, y + (i + 4)* style.size));
 
+	for(vector<nSymbol>::iterator layout_it = layout->begin();
+			layout_it->propereties != -1;
+			++layout_it)
+		drawNote(style, x + layout_it->position, y + layout_it->propereties*style.size/2);
+}
+/*
 cursor::cursor(QWidget* parentWidget):QWidget(parentWidget)
 {
 	int nSize = parentWidget->getNoteSize();
@@ -43,49 +37,54 @@ cursor::cursor(QWidget* parentWidget):QWidget(parentWidget)
 void cursor::setPos(list<char>::iterator pos) {position = pos;}
 
 list<char>::iterator cursor::getPos() {return position;}
+*/
 
-#define N 4
+void nStringLayout::setStyle(nStringStyle stl) {style = stl;}
+nStringStyle nStringLayout::getStyle() const {return style;}
 
-document::document(list<char>::iterator mld_begin, list<char>::iterator mld_end)
+it nStringLayout::setLayout(it begin, it end)
 {
-	melody = list<char>(mld_begin, mld_end);
-	nString = new noteString*[10];
+	qreal pos = 0;
+	int i;
+	it nChar = begin;
+	nSymbol sym;
+	clear();
+	for(i = 0; (pos < style.width - style.space) & (nChar != end); ++i)
+	{
+		sym.position = pos;
+		sym.propereties = 17 + 'c' - *nChar;
+		push_back(sym);
+		pos += style.space;
+		++nChar;
+	}
+	sym.propereties = -1;
+	push_back(sym);
+	return nChar;
+}
+
+document::document(it mld_begin, it mld_end):QWidget()
+{
+	melody = std::list<char>(mld_begin, mld_end);
 
 	format.topMargin = 70;
 	format.leftMargin = 70;
 	format.rightMargin = 70;
 	format.bottomMargin = 70;
-	format.stringSpace = 0;
-	style.nSize = 15;
+	format.strSpace = 0;
 
-	layout = new QVBoxLayout;
-	layout->setContentsMargins(format.leftMargin, format.topMargin, format.rightMargin, format.bottomMargin);
-	layout->setSpacing(format.stringSpace);
+	style.width = strWidth();
+	style.size = 15;
+	style.space = space();
+	layout.setStyle(style);
+	layout.setLayout(melody.begin(), melody.begin());
 
-	for(int i = 0; i < N; ++i)
-	{
-		nString[i] = new noteString(this);
-		nString[i]->setContent(mld_begin, mld_begin);
-		nString[i]->setFixedHeight(16*style.nSize);
-		layout->addWidget(nString[i]);
-	}
-	layout->addStretch(0);
-	this->setLayout(layout);
-
-	_cursor = new cursor;
-	_cursor->setPos(mld_begin);
+//	_cursor->setPos(mld_begin);
+	setMinimumWidth(format.leftMargin + format.rightMargin + 2*space());
 }
 
-document::~document()
-{
-	delete layout;
-	for(int i = 0; i < N; ++i)
-		delete nString[i];
-	delete cursor;
-	delete[] nString;
-}
-
-int document::getNoteSize() {return style.nSize;}
+qreal document::strWidth() const{
+	return width() - format.leftMargin - format.rightMargin;}
+qreal document::space() const{return 4*style.size;}
 
 void document::keyPressEvent(QKeyEvent* pressEvent)
 {
@@ -100,25 +99,20 @@ void document::keyPressEvent(QKeyEvent* pressEvent)
 
 void document::paintEvent(QPaintEvent*)
 {
-	int horisontalPos;
-	list<char>::iterator str_begin = melody.begin(), str_end = str_begin;
-	int str_width = width() - format.leftMargin - format.rightMargin;
-	for(int i = 0; (i < N); ++i)
+	nStringPainter painter(this);
+	painter.setBrush(QBrush(black, SolidPattern));
+
+	style.width = strWidth();
+	style.space = space();
+	layout.setStyle(style);
+	qreal strSize = 16*style.size;
+	it strBegin = melody.begin();
+	for(int i = 0; strBegin != melody.end(); ++i)
 	{
-		horisontalPos = 5*style.nSize;
-		while((horisontalPos < str_width) & (str_end != melody.end()))
-		{
-
-			++str_end;
-			horisontalPos += 4*style.nSize;
-		}
-
-		nString[i]->setContent(str_begin, str_end);
-		if((str_begin == str_end) & !(nString[i]->isHidden()))
-			nString[i]->hide();
-		if((str_begin != str_end) & (nString[i]->isHidden()))
-			nString[i]->show();
-
-		str_begin = str_end;
+		strBegin = layout.setLayout(strBegin, melody.end());
+		painter.drawString(
+				&layout,
+				format.leftMargin,
+				format.topMargin + i* (strSize + format.strSpace));
 	}
 }
