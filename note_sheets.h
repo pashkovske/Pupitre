@@ -22,42 +22,39 @@ struct nStringStyle
 {
 	qreal size, space, width;
 };
-/*
-class cursor : public QWidget
-{
-	std::list<char>::iterator position;
-	void paintEvent(QPaintEvent*);
-public:
-	std::list<char>::iterator getPos();
-	void setPos(std::list<char>::iterator);
-};
-*/
+
 class nStringLayout : public std::vector<nSymbol>
 {
 	nStringStyle style;
+	QPoint cursorPosition;
 public:
 	void setStyle(nStringStyle);
 	nStringStyle getStyle() const;
+	QPoint getCursorPosition() const;
+	
 	std::list<char>::iterator setLayout(
 			std::list<char>::iterator begin,
-			std::list<char>::iterator end);
+			std::list<char>::iterator end,
+			std::list<char>::iterator cursor);
 };
 
 class document : public QWidget
 {
 	std::list<char> melody;
+	std::list<char>::iterator cursor_it;
+	QRect cursor;
+	bool cursorVisible;
 	nStringLayout layout;
 	melodyFormat format;
-//	cursor* _cursor;
 	nStringStyle style;
 
 	void paintEvent(QPaintEvent*);
 	void keyPressEvent(QKeyEvent*);
+	void timerEvent(QTimerEvent*);
 public:
 	document(std::list<char>::iterator begin, std::list<char>::iterator end);
 	qreal strWidth() const;
 	qreal space() const;
-//	std::vector<nSymbol>::iterator getStringLayout();
 };
 
 class nStringPainter : public QPainter
@@ -66,4 +63,5 @@ public:
 	nStringPainter(document*);
 	void drawString(nStringLayout* const, qreal x, qreal y);
 	void drawNote(nStringStyle, qreal x, qreal y);
+	void drawCursor(QRect);
 };
