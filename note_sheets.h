@@ -2,25 +2,25 @@
 #include <QtWidgets>
 #include <list>
 #include <vector>
-
-#define STR_NUM_ON_PAGE 10
+#include <string>
 
 struct melodyFormat
 {
-	qreal topMargin, rightMargin, leftMargin, bottomMargin,
+	int topMargin, rightMargin, leftMargin, bottomMargin,
 	    strSpace;
 	int clef, timeSignature;
 };
 
-struct nSymbol
-{
-	qreal position, size;
-	int propereties;
-};
-
 struct nStringStyle
 {
-	qreal size, space, width;
+	unsigned int size;
+	int space, width;
+};
+
+struct nSymbol
+{
+	int position;
+	unsigned int size, props;
 };
 
 class nStringLayout : public std::vector<nSymbol>
@@ -32,36 +32,40 @@ public:
 	nStringStyle getStyle() const;
 	QPoint getCursorPosition() const;
 	
-	std::list<char>::iterator setLayout(
-			std::list<char>::iterator begin,
-			std::list<char>::iterator end,
-			std::list<char>::iterator cursor);
+	std::list<unsigned int>::iterator setLayout(
+			std::list<unsigned int>::iterator begin,
+			std::list<unsigned int>::iterator end,
+			std::list<unsigned int>::iterator cursor);
 };
 
 class document : public QWidget
 {
-	std::list<char> melody;
-	std::list<char>::iterator cursor_it;
+	std::list<unsigned int> melody;
+	std::list<unsigned int>::iterator cursor_it;
+	unsigned int cursorProps;
+	std::string currentInput;
 	QRect cursor;
 	bool cursorVisible;
 	nStringLayout layout;
 	melodyFormat format;
 	nStringStyle style;
 
+	unsigned int nSymbolConversion(std::string::const_iterator);
 	void paintEvent(QPaintEvent*);
 	void keyPressEvent(QKeyEvent*);
 	void timerEvent(QTimerEvent*);
 public:
-	document(std::list<char>::iterator begin, std::list<char>::iterator end);
-	qreal strWidth() const;
-	qreal space() const;
+	document(const std::string&);
+	void melodyInitialization(const std::string&);
+	int strWidth() const;
+	int space() const;
 };
 
 class nStringPainter : public QPainter
 {
 public:
 	nStringPainter(document*);
-	void drawString(nStringLayout* const, qreal x, qreal y);
-	void drawNote(nStringStyle, qreal x, qreal y);
+	void drawString(const nStringLayout&, int x, int y);
+	void drawNote(int x, int y, unsigned int size, unsigned int duration);
 	void drawCursor(QRect);
 };
